@@ -132,6 +132,8 @@ project(':autocomplete-index-build') {
 project(':autocomplete-training') {
     dependencies {
         api project(':autocomplete-common')
+        // Reuses Impression / Click / PropensityModel from CP13.
+        implementation project(':autocomplete-reranker')
     }
 }
 
@@ -159,6 +161,10 @@ project(':autocomplete-simulator') {
         implementation project(':autocomplete-aggregator')
         implementation project(':autocomplete-fst-primary')
         implementation project(':autocomplete-delta-tier')
+        implementation project(':autocomplete-reranker')
+        implementation project(':autocomplete-node')
+        // Tests construct PrincipalSet inline.
+        testImplementation project(':autocomplete-acl')
     }
 }
 
@@ -166,11 +172,21 @@ project(':autocomplete-bench') {
     dependencies {
         api project(':autocomplete-common')
         implementation project(':autocomplete-node')
+        // BenchRunner takes AggregatorRequest directly so the harness
+        // can drive the same surface as production.
+        implementation project(':autocomplete-aggregator')
+        // Tests construct corpora + principals directly.
+        testImplementation project(':autocomplete-fst-primary')
+        testImplementation project(':autocomplete-acl')
     }
 }
 
 project(':autocomplete-admin') {
     dependencies {
         api project(':autocomplete-common')
+        // Operator commands target the runtime caches + delta tier.
+        implementation project(':autocomplete-acl')
+        implementation project(':autocomplete-delta-tier')
+        implementation project(':autocomplete-aggregator')
     }
 }
