@@ -1,0 +1,172 @@
+allprojects {
+    group = 'com.hkg.distributedsearchautocomplete'
+    version = '0.1.0-SNAPSHOT'
+
+    repositories {
+        mavenCentral()
+    }
+}
+
+subprojects {
+    apply plugin: 'java-library'
+
+    java {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    dependencies {
+        testImplementation platform('org.junit:junit-bom:5.10.2')
+        testImplementation 'org.junit.jupiter:junit-jupiter'
+        testImplementation 'org.assertj:assertj-core:3.25.3'
+        testRuntimeOnly  'org.junit.platform:junit-platform-launcher'
+    }
+
+    test {
+        useJUnitPlatform()
+    }
+
+    compileJava.options.encoding     = 'UTF-8'
+    compileTestJava.options.encoding = 'UTF-8'
+}
+
+// === Module dependency graph ===
+// Lucene supplies FST + AnalyzingInfixSuggester + Levenshtein automaton.
+// ICU4J supplies UAX-15 normalization, UAX-29 segmentation, transliteration.
+
+ext.luceneVersion = '9.10.0'
+ext.icu4jVersion  = '74.2'
+
+project(':autocomplete-fst-primary') {
+    dependencies {
+        api project(':autocomplete-common')
+        implementation "org.apache.lucene:lucene-core:${rootProject.ext.luceneVersion}"
+        implementation "org.apache.lucene:lucene-suggest:${rootProject.ext.luceneVersion}"
+        implementation "org.apache.lucene:lucene-analysis-common:${rootProject.ext.luceneVersion}"
+    }
+}
+
+project(':autocomplete-delta-tier') {
+    dependencies {
+        api project(':autocomplete-common')
+    }
+}
+
+project(':autocomplete-infix') {
+    dependencies {
+        api project(':autocomplete-common')
+        implementation "org.apache.lucene:lucene-core:${rootProject.ext.luceneVersion}"
+        implementation "org.apache.lucene:lucene-suggest:${rootProject.ext.luceneVersion}"
+        implementation "org.apache.lucene:lucene-analysis-common:${rootProject.ext.luceneVersion}"
+    }
+}
+
+project(':autocomplete-fuzzy') {
+    dependencies {
+        api project(':autocomplete-common')
+        implementation project(':autocomplete-fst-primary')
+        implementation "org.apache.lucene:lucene-core:${rootProject.ext.luceneVersion}"
+    }
+}
+
+project(':autocomplete-query-understanding') {
+    dependencies {
+        api project(':autocomplete-common')
+        implementation "com.ibm.icu:icu4j:${rootProject.ext.icu4jVersion}"
+    }
+}
+
+project(':autocomplete-acl') {
+    dependencies {
+        api project(':autocomplete-common')
+        implementation 'org.roaringbitmap:RoaringBitmap:1.0.6'
+    }
+}
+
+project(':autocomplete-reranker') {
+    dependencies {
+        api project(':autocomplete-common')
+    }
+}
+
+project(':autocomplete-diversification') {
+    dependencies {
+        api project(':autocomplete-common')
+    }
+}
+
+project(':autocomplete-aggregator') {
+    dependencies {
+        api project(':autocomplete-common')
+        implementation project(':autocomplete-fst-primary')
+        implementation project(':autocomplete-delta-tier')
+        implementation project(':autocomplete-infix')
+        implementation project(':autocomplete-fuzzy')
+        implementation project(':autocomplete-query-understanding')
+        implementation project(':autocomplete-acl')
+        implementation project(':autocomplete-reranker')
+        implementation project(':autocomplete-diversification')
+    }
+}
+
+project(':autocomplete-edge') {
+    dependencies {
+        api project(':autocomplete-common')
+        implementation project(':autocomplete-aggregator')
+    }
+}
+
+project(':autocomplete-index-build') {
+    dependencies {
+        api project(':autocomplete-common')
+        implementation project(':autocomplete-fst-primary')
+        implementation "org.apache.lucene:lucene-core:${rootProject.ext.luceneVersion}"
+        implementation "org.apache.lucene:lucene-suggest:${rootProject.ext.luceneVersion}"
+    }
+}
+
+project(':autocomplete-training') {
+    dependencies {
+        api project(':autocomplete-common')
+    }
+}
+
+project(':autocomplete-node') {
+    dependencies {
+        api project(':autocomplete-common')
+        implementation project(':autocomplete-fst-primary')
+        implementation project(':autocomplete-delta-tier')
+        implementation project(':autocomplete-infix')
+        implementation project(':autocomplete-fuzzy')
+        implementation project(':autocomplete-query-understanding')
+        implementation project(':autocomplete-acl')
+        implementation project(':autocomplete-reranker')
+        implementation project(':autocomplete-diversification')
+        implementation project(':autocomplete-aggregator')
+        implementation project(':autocomplete-edge')
+        implementation project(':autocomplete-index-build')
+        implementation project(':autocomplete-training')
+    }
+}
+
+project(':autocomplete-simulator') {
+    dependencies {
+        api project(':autocomplete-common')
+        implementation project(':autocomplete-aggregator')
+        implementation project(':autocomplete-fst-primary')
+        implementation project(':autocomplete-delta-tier')
+    }
+}
+
+project(':autocomplete-bench') {
+    dependencies {
+        api project(':autocomplete-common')
+        implementation project(':autocomplete-node')
+    }
+}
+
+project(':autocomplete-admin') {
+    dependencies {
+        api project(':autocomplete-common')
+    }
+}

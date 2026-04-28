@@ -1,0 +1,32 @@
+rootProject.name = 'distributed-search-autocomplete'
+
+// Foundational
+include 'autocomplete-common'
+
+// Retrieval
+include 'autocomplete-fst-primary'
+include 'autocomplete-delta-tier'
+include 'autocomplete-infix'
+include 'autocomplete-fuzzy'
+
+// Pre-processing
+include 'autocomplete-query-understanding'
+
+// Ranking + ACL
+include 'autocomplete-acl'
+include 'autocomplete-reranker'
+include 'autocomplete-diversification'
+
+// Coordination + edge
+include 'autocomplete-aggregator'
+include 'autocomplete-edge'
+
+// Build + training
+include 'autocomplete-index-build'
+include 'autocomplete-training'
+
+// End-to-end + tools
+include 'autocomplete-node'
+include 'autocomplete-simulator'
+include 'autocomplete-bench'
+include 'autocomplete-admin'
