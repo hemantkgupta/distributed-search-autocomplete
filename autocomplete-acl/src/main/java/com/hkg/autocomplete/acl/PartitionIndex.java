@@ -84,6 +84,41 @@ public final class PartitionIndex {
         return map.size();
     }
 
+    /**
+     * Post-build membership add for delta-tier entities.
+     *
+     * <p>The static index is built once at index-build time. The delta
+     * tier introduces entities the index did not see. Production
+     * deployments either (a) accept a small staleness window or (b)
+     * maintain a parallel mutable overlay; this method implements (b)
+     * as a thin Roaring-bitmap mutation.
+     *
+     * <p>Threading: callers must synchronize their own writes; the
+     * underlying {@code RoaringBitmap.add} is not thread-safe. The
+     * aggregator funnels delta-driven adds through the single ingest
+     * thread so this is naturally serialized in production.
+     */
+    public void addDeltaMembership(PartitionKey key, int ordinal) {
+        Objects.requireNonNull(key, "key");
+        if (ordinal < 0) {
+            throw new IllegalArgumentException("ordinal must be non-negative");
+        }
+        // The constructor wraps the builder's map with Map.copyOf which
+        // returns an unmodifiable view, so we can't put a new key. Pre-
+        // existing keys' bitmaps remain mutable on the heap because
+        // RoaringBitmap is not deeply copied; we mutate in place.
+        RoaringBitmap b = map.get(key);
+        if (b == null) {
+            // The static index has no bitmap for this dimension/value;
+            // a delta entity with a brand-new partition value has to
+            // wait for the next rebuild. Production paging signal: log
+            // and drop, do not silently swallow.
+            throw new IllegalStateException(
+                    "no static bitmap for " + key + "; delta entity needs full rebuild");
+        }
+        b.add(ordinal);
+    }
+
     public static Builder builder() {
         return new Builder();
     }

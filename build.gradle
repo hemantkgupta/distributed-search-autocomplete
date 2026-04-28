@@ -106,6 +106,10 @@ project(':autocomplete-aggregator') {
         implementation project(':autocomplete-acl')
         implementation project(':autocomplete-reranker')
         implementation project(':autocomplete-diversification')
+        // Bitmap intersection for the in-aggregator pre-filter; the
+        // bitmaps come from autocomplete-acl but the aggregator runs
+        // the boolean composition itself.
+        implementation 'org.roaringbitmap:RoaringBitmap:1.0.6'
     }
 }
 
