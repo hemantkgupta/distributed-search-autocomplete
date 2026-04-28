@@ -1,0 +1,76 @@
+# FST primary shards — one Pod per (tenant-cohort × entity-family) cell.
+#
+# StatefulSet rather than Deployment because:
+#   * Each Pod has stable identity for the etcd shard-map ("fst-shard-3"
+#     can be addressed deterministically in the alias).
+#   * Each Pod owns a PersistentVolume holding the FST blob plus its
+#     blue/green slot; pod restart re-mounts the same PV and the FST
+#     comes back without a fresh S3 download.
+#   * Rolling updates respect ordinal order, so the alias swap during
+#     a deploy never lands on a Pod whose state isn't ready yet.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: fst-shard
+  namespace: typeahead
+spec:
+  serviceName: fst-shard
+  replicas: 8
+  selector:
+    matchLabels:
+      app: fst-shard
+  template:
+    metadata:
+      labels:
+        app: fst-shard
+        tier: retrieval
+    spec:
+      terminationGracePeriodSeconds: 60     # drain in-flight queries on rolling update
+      containers:
+        - name: fst-shard
+          image: distributed-search-autocomplete/fst-shard:0.1.0
+          ports:
+            - { name: grpc,    containerPort: 7000 }
+            - { name: metrics, containerPort: 9090 }
+          env:
+            - name: SHARD_ORDINAL
+              valueFrom: { fieldRef: { fieldPath: metadata.name } }
+          envFrom:
+            - configMapRef: { name: typeahead-config }
+          # On-heap FSTs eliminate the off-heap page-eviction tail
+          # latency (see CP-2 LuceneFstShard javadoc); JVM heap sized
+          # to fit the largest expected shard slice plus 25% headroom.
+          resources:
+            requests: { cpu: "2",  memory: "8Gi" }
+            limits:   { cpu: "4",  memory: "10Gi" }
+          volumeMounts:
+            - name: fst-state
+              mountPath: /var/lib/fst
+          readinessProbe:
+            httpGet: { path: /health, port: metrics }
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /health, port: metrics }
+            periodSeconds: 30
+  volumeClaimTemplates:
+    - metadata:
+        name: fst-state
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests:
+            storage: 80Gi          # FST blob + blue/green slot + temp
+        storageClassName: ssd
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fst-shard
+  namespace: typeahead
+spec:
+  clusterIP: None                  # headless; pods addressed via DNS
+  selector: { app: fst-shard }
+  ports:
+    - { name: grpc,    port: 7000 }
+    - { name: metrics, port: 9090 }

@@ -1,0 +1,67 @@
+# Delta tier — small, mutable, in-memory; backed by a PV-resident WAL
+# so writes survive Pod restarts within the freshness budget.
+#
+# StatefulSet for the same reason as FST shards: stable Pod identity
+# is required so the aggregator's etcd-watched delta-cell map points
+# at the right address, and the WAL PV re-mounts on restart so a crash
+# replays only the tail since the last fsync.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: delta-tier
+  namespace: typeahead
+spec:
+  serviceName: delta-tier
+  replicas: 4
+  selector:
+    matchLabels:
+      app: delta-tier
+  template:
+    metadata:
+      labels:
+        app: delta-tier
+        tier: retrieval
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: delta-tier
+          image: distributed-search-autocomplete/delta-tier:0.1.0
+          ports:
+            - { name: grpc,    containerPort: 7100 }
+            - { name: metrics, containerPort: 9090 }
+          envFrom:
+            - configMapRef: { name: typeahead-config }
+          resources:
+            requests: { cpu: "1",  memory: "2Gi" }
+            limits:   { cpu: "2",  memory: "4Gi" }
+          volumeMounts:
+            - name: wal
+              mountPath: /var/lib/delta-wal
+          readinessProbe:
+            httpGet: { path: /health, port: metrics }
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /health, port: metrics }
+            periodSeconds: 30
+  volumeClaimTemplates:
+    - metadata:
+        name: wal
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests:
+            storage: 5Gi
+        storageClassName: ssd
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: delta-tier
+  namespace: typeahead
+spec:
+  clusterIP: None
+  selector: { app: delta-tier }
+  ports:
+    - { name: grpc,    port: 7100 }
+    - { name: metrics, port: 9090 }

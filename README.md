@@ -6,7 +6,7 @@ The full blog describes the architecture in twelve services. This repo organizes
 
 ## Status
 
-**Skeleton only — no checkpoints implemented yet.** Module dependency graph wired in `build.gradle`; per-module `build.gradle` stubs in place; package layout established.
+**All 5 phases complete (Checkpoints 1–28). 258 tests passing.** Full multi-module build green across all 17 modules. End-to-end pipeline working: corpus → FST + delta tier → query understanding → fanout → merge with tombstone shadow → pre-filter → reranker → counterfactual training loop → post-filter → diversification → tenant pool cache → edge worker pool cache → top-K to client.
 
 Planned in 5 phases (CP1–CP28), mirroring `distributed-web-crawler`:
 

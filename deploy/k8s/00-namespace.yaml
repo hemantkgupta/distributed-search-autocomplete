@@ -1,0 +1,11 @@
+# Namespace for the typeahead service.
+# Single namespace with NetworkPolicies (see 90-network-policy.yaml)
+# enforcing east-west traffic boundaries between aggregator → shard
+# fanout, shard → S3 artifact reads, and CronJob → shard alias
+# updates.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: typeahead
+  labels:
+    app.kubernetes.io/part-of: distributed-search-autocomplete

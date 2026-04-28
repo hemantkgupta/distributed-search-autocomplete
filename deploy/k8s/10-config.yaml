@@ -1,0 +1,35 @@
+# Shared runtime configuration. Tunables that change across regions
+# (S3 endpoint, etcd endpoints) live here as ConfigMap entries; the
+# operator overrides them per environment via Kustomize overlays.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: typeahead-config
+  namespace: typeahead
+data:
+  # Index storage
+  S3_ENDPOINT: "https://s3.amazonaws.com"
+  S3_BUCKET: "typeahead-indices"
+
+  # Coordination
+  ETCD_ENDPOINTS: "etcd-0.etcd:2379,etcd-1.etcd:2379,etcd-2.etcd:2379"
+
+  # Compaction policy — production defaults from CompactionPolicy.productionDefaults()
+  DELTA_MAX_ENTRIES: "1000000"
+  DELTA_MAX_AGE_MS: "1800000"   # 30 minutes
+  DELTA_HARD_CAP: "5000000"
+
+  # Cache TTLs
+  EDGE_POOL_TTL_MS: "30000"
+  TENANT_POOL_TTL_MS: "10000"
+  PRINCIPAL_CACHE_TTL_MS: "300000"  # 5 minutes
+
+  # Per-shard deadlines (ms)
+  FST_DEADLINE_MS: "12"
+  DELTA_DEADLINE_MS: "5"
+  INFIX_DEADLINE_MS: "10"
+  FUZZY_DEADLINE_MS: "12"
+
+  # Reranker
+  RERANKER_MAX_CANDIDATES: "200"
+  RERANKER_FEATURE_FETCH_TIMEOUT_MS: "8"

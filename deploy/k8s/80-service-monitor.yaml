@@ -1,0 +1,51 @@
+# Prometheus ServiceMonitors for each tier. Wired to the
+# /metrics:9090 port that every service exposes via InMemoryMetrics
+# (CP-27). The kube-prometheus-stack operator picks these up and
+# adds the targets to the scrape config automatically.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: aggregator
+  namespace: typeahead
+  labels:
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: aggregator
+  endpoints:
+    - port: metrics
+      interval: 15s
+      path: /metrics
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: fst-shard
+  namespace: typeahead
+  labels:
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: fst-shard
+  endpoints:
+    - port: metrics
+      interval: 15s
+      path: /metrics
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: delta-tier
+  namespace: typeahead
+  labels:
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: delta-tier
+  endpoints:
+    - port: metrics
+      interval: 15s
+      path: /metrics

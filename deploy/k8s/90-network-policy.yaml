@@ -1,0 +1,74 @@
+# NetworkPolicies enforcing east-west traffic boundaries.
+#
+# The aggregator may speak to FST shards and the delta tier; nothing
+# else inside the namespace may. Edge ingress comes through the
+# ingress controller in the namespace gateway (not modelled here).
+#
+# Default-deny posture: every Pod denies all ingress except what is
+# explicitly allowed below. This is the production-canonical Zero-
+# Trust shape — no service can be silently reachable from a co-tenant
+# Pod that gets compromised.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: typeahead
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+  egress:
+    # DNS only by default; explicit policies below grant other egress.
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - { protocol: UDP, port: 53 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: aggregator-to-shards
+  namespace: typeahead
+spec:
+  podSelector:
+    matchLabels: { tier: retrieval }
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: { tier: coordination }
+      ports:
+        - { protocol: TCP, port: 7000 }   # FST shard gRPC
+        - { protocol: TCP, port: 7100 }   # delta tier gRPC
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: scrape-metrics
+  namespace: typeahead
+spec:
+  podSelector: {}
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - { protocol: TCP, port: 9090 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: index-build-egress
+  namespace: typeahead
+spec:
+  podSelector:
+    matchLabels:
+      job-name-prefix: index-build
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0          # S3 + corpus DBs reachable via NAT
+      ports:
+        - { protocol: TCP, port: 443 }
